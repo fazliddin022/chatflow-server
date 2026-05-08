@@ -94,6 +94,47 @@ io.on("connection", (socket) => {
     socket.to(data.roomId).emit("typing:hide");
   });
 
+  // Xabarni edit qilish
+  socket.on("message:edit", async (data: {
+    messageId: string;
+    content: string;
+    roomId: string;
+  }) => {
+    try {
+      const { data: message, error } = await supabase
+        .from("messages")
+        .update({ content: data.content, is_edited: true })
+        .eq("id", data.messageId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      io.to(data.roomId).emit("message:edited", message);
+    } catch (err) {
+      console.error("Edit error:", err);
+    }
+  });
+
+  // Xabarni delete qilish
+  socket.on("message:delete", async (data: {
+    messageId: string;
+    roomId: string;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from("messages")
+        .delete()
+        .eq("id", data.messageId);
+
+      if (error) throw error;
+
+      io.to(data.roomId).emit("message:deleted", data.messageId);
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
+  });
+
   // Disconnect
   socket.on("disconnect", () => {
     // Online users dan o'chirish
